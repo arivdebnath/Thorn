@@ -1,6 +1,8 @@
 #include <stdio.h>
+#include <stdlib.h>
 
-static char input[2048];
+#include <editline/readline.h>
+#include <editline/history.h>
 
 int main(int argc, char** argv){
 
@@ -9,10 +11,15 @@ int main(int argc, char** argv){
     puts("Press Ctrl+C to Exit\n");
 
     while(1){
-        fputs("thorn> ", stdout);
-        fgets(input, 2048, stdin);
 
-        printf("No no no %s", input);
+        // prompt output and getting input
+        char* input = readline("thorn> ");
+
+        add_history(input);
+
+        printf("No no no %s\n", input);
+
+        free(input);
     }
 
     return 0;
