@@ -1,4 +1,4 @@
-output: parsing.o mpc.o
+parsing: parsing.o mpc.o
 	gcc -std=c99 -Wall parsing.o mpc.o -ledit -lm -o parsing
 
 parsing.o: parsing.c
