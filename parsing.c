@@ -41,25 +41,86 @@ int number_of_nodes(mpc_ast_t* t){
     return 0;
 }
 
-long eval_operation(long x, char* op, long y){
-    if(!strcmp(op, "+")){ return x+y; }
-    if(!strcmp(op, "-")){ return x-y; }
-    if(!strcmp(op, "*")){ return x*y; }
-    if(!strcmp(op, "/")){ return x/y; }
-    if(!strcmp(op, "%")){ return x%y; }
-    
-    return 0;
+//enums
+enum{ TVAL_NUM, TVAL_ERR};
+enum{ TERR_DIV_ZERO, TERR_INV_OP, TERR_BAD_NUM };
+
+// value struct
+typedef struct {
+    int type;
+    long num;
+    int err;
+} tval;
+
+tval tval_num(long x){
+    tval v;
+    v.type = TVAL_NUM;
+    v.num = x;
+    return v;
+}
+tval tval_err(int x){
+    tval v;
+    v.type = TVAL_ERR;
+    v.num = x;
+    return v;
+}
+
+void tval_print(tval v){
+    switch (v.type)
+    {
+    case TVAL_NUM:
+        printf("%li", v.num);
+        break;
+    case TVAL_ERR:
+        if(v.err==TERR_DIV_ZERO){
+            printf("Error: Division By Zero!");
+        }
+        if(v.err==TERR_INV_OP){
+            printf("Error: Invaild Operation!");
+        }
+        if (v.err==TERR_BAD_NUM)
+        {
+            printf("Error: Invaild Number!");
+        }
+    break;
+    }
+}
+// seperate function for printing line
+void tval_println(tval v){ 
+    tval_print(v);
+    putchar('\n');
+}
+
+tval eval_operation(tval x, char* op, tval y){
+
+    if(x.type==TVAL_ERR){ return x; }
+    if(y.type==TVAL_ERR){ return y; }
+
+    if(!strcmp(op, "+")){ return tval_num(x.num+y.num); }
+    if(!strcmp(op, "-")){ return tval_num(x.num-y.num); }
+    if(!strcmp(op, "*")){ return tval_num(x.num*y.num); }
+    if(!strcmp(op, "%")){ return tval_num(x.num%y.num); }
+    if(!strcmp(op, "/")){ 
+        // if(y.num==0){
+        //     return tval_err(TERR_DIV_ZERO);
+        // }else{
+        //     return tval_num(x.num/y.num); }
+        return y.num==0 ? tval_err(TERR_DIV_ZERO) : tval_num(x.num/y.num);
+        }
+    return tval_err(TERR_INV_OP);
 }
 
 
-long eval(mpc_ast_t* t){
-    if(strstr( t->tag, "number")){
-        return atoi(t->contents);
+tval eval(mpc_ast_t* t){
+    if(strstr(t->tag, "number")) {
+        errno = 0;
+        long x = strtol(t->contents, NULL, 10);
+        return errno != ERANGE ? tval_num(x) : tval_err(TERR_BAD_NUM);
     }
 
     char* op = t->children[1]->contents;
 
-    long x = eval(t->children[2]);
+    tval x = eval(t->children[2]);
 
     int j = 3;
     while(strstr(t->children[j]->tag, "expr")){
@@ -91,7 +152,7 @@ int main(int argc, char **argv)
     Number, Operator, Expr, Thorn);
 
     // displays basic information
-    puts("Thorn version 0.0.3");
+    puts("Thorn version 0.0.4");
     puts("Press Ctrl+C to Exit\n");
 
     while (1)
@@ -105,8 +166,9 @@ int main(int argc, char **argv)
         // printf("No no no %s\n", input);
         mpc_result_t r;
         if(mpc_parse("<stdin>", input, Thorn, &r)){
-            mpc_ast_print(r.output);
-            printf("ans:%ld\n", eval(r.output));
+            // mpc_ast_print(r.output);
+            tval result =  eval(r.output);
+            tval_println(result);
             mpc_ast_delete(r.output);
         } else {
             mpc_err_print(r.error);
