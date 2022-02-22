@@ -61,7 +61,7 @@ tval tval_num(long x){
 tval tval_err(int x){
     tval v;
     v.type = TVAL_ERR;
-    v.num = x;
+    v.err= x;
     return v;
 }
 
