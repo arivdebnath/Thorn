@@ -1,3 +1,2 @@
 parsing
-parsing.o
-mpc.o
+*.o
