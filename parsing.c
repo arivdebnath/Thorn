@@ -141,16 +141,18 @@ int main(int argc, char **argv)
     mpc_parser_t *Expr = mpc_new("expr");
     mpc_parser_t *Thorn = mpc_new("thorn");
     mpc_parser_t *Number = mpc_new("number");
-    mpc_parser_t *Operator = mpc_new("operator");
+    mpc_parser_t *Symbol = mpc_new("symbol");
+    mpc_parser_t *Syexpr = mpc_new("syexpr");
 
     mpca_lang(MPCA_LANG_DEFAULT,
         "                                                   \
         number   :  /-?[0-9]+/ ;                            \
-        operator :  '+' | '-' | '*' | '/' | '%' | '^' ;     \
+        symbol   :  '+' | '-' | '*' | '/' | '%' | '^' ;     \
+        syexpr   : '(' <expr>* ')' ;                        \
         expr     :  <number> | '(' <operator> <expr>+ ')' ; \
         thorn    : /^/<operator> <expr>+/$/ ;               \
         ",
-    Number, Operator, Expr, Thorn);
+    Number, Symbol, Syexpr, Expr, Thorn);
 
     // displays basic information
     puts("Thorn version 0.0.4");
@@ -178,7 +180,7 @@ int main(int argc, char **argv)
         
         free(input);
     }
-    mpc_cleanup(4, Number, Operator, Expr, Thorn);
+    mpc_cleanup(5, Number, Symbol, Syexpr, Expr, Thorn);
 
     return 0;
 }
