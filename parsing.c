@@ -100,6 +100,7 @@ tval eval_operation(tval x, char* op, tval y){
     if(!strcmp(op, "-")){ return tval_num(x.num-y.num); }
     if(!strcmp(op, "*")){ return tval_num(x.num*y.num); }
     if(!strcmp(op, "%")){ return tval_num(x.num%y.num); }
+    if(!strcmp(op, "^")){ return tval_num((long) pow(x.num, y.num)); }
     if(!strcmp(op, "/")){ 
         // if(y.num==0){
         //     return tval_err(TERR_DIV_ZERO);
@@ -145,7 +146,7 @@ int main(int argc, char **argv)
     mpca_lang(MPCA_LANG_DEFAULT,
         "                                                   \
         number   :  /-?[0-9]+/ ;                            \
-        operator :  '+' | '-' | '*' | '/' | '%' ;           \
+        operator :  '+' | '-' | '*' | '/' | '%' | '^' ;     \
         expr     :  <number> | '(' <operator> <expr>+ ')' ; \
         thorn    : /^/<operator> <expr>+/$/ ;               \
         ",
