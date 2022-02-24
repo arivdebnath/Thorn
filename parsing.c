@@ -42,15 +42,20 @@ int number_of_nodes(mpc_ast_t* t){
 }
 
 //enums
-enum{ TVAL_NUM, TVAL_ERR};
+enum{ TVAL_NUM, TVAL_ERR, TVAL_SYM, TVAL_SYEXPR};
 enum{ TERR_DIV_ZERO, TERR_INV_OP, TERR_BAD_NUM };
 
 // value struct
-typedef struct {
+typedef struct tval{
     int type;
     long num;
-    int err;
-} tval;
+    // Error and Symbol/operator
+    char* err;
+    char* sym;
+    // Count and pointer to a list of tval*
+    int count;
+    struct tval** cell;
+}tval;
 
 tval tval_num(long x){
     tval v;
