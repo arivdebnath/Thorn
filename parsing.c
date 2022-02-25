@@ -80,6 +80,34 @@ tval* tval_sym(char* s){
     return v;
 }
 
+tval* tval_syexpr(void){
+    tval* v = malloc(sizeof(tval));
+    v->type = TVAL_SYEXPR;
+    v->count = 0;
+    v->cell = NULL;
+    return v;
+}
+
+// Function to delete the heap memory acquired from malloc
+void tval_del(tval* v) {
+    switch(v->type){
+        case TVAL_NUM:
+            break;
+        case TVAL_ERR:
+            free(v->err);
+            break;
+        case TVAL_SYM:
+            free(v->sym);
+            break;
+        case TVAL_SYEXPR:
+            for(int i=0; i<v->count; i++){
+                tval_del(v->cell[i]);
+            }
+            free(v->cell);
+            break;
+    }
+    free(v);
+}
 
 void tval_print(tval v){
     switch (v.type)
