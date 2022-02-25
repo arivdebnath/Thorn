@@ -40,7 +40,8 @@ int number_of_nodes(mpc_ast_t* t){
     }
     return 0;
 }
-
+//
+// adding double field breaks the program and throws error 'INVALID PARSER' for every parser type
 //enums
 enum{ TVAL_NUM, TVAL_ERR, TVAL_SYM, TVAL_SYEXPR};
 enum{ TERR_DIV_ZERO, TERR_INV_OP, TERR_BAD_NUM };
