@@ -57,18 +57,29 @@ typedef struct tval{
     struct tval** cell;
 }tval;
 
-tval tval_num(long x){
-    tval v;
-    v.type = TVAL_NUM;
-    v.num = x;
+tval* tval_num(long x){
+    tval* v = malloc(sizeof(tval));
+    v->type = TVAL_NUM;
+    v->num = x;
     return v;
 }
-tval tval_err(int x){
-    tval v;
-    v.type = TVAL_ERR;
-    v.err= x;
+
+tval* tval_err(char* m){
+    tval* v = malloc(sizeof(tval));
+    v->type = TVAL_ERR;
+    v->err = malloc(strlen(m)+1);
+    strcpy(v->err, m);
     return v;
 }
+
+tval* tval_sym(char* s){
+    tval* v = malloc(sizeof(tval));
+    v->type = TVAL_SYM;
+    v->sym = malloc(strlen(s)+1);
+    strcpy(v->sym, s);
+    return v;
+}
+
 
 void tval_print(tval v){
     switch (v.type)
