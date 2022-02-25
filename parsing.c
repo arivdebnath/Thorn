@@ -109,6 +109,38 @@ void tval_del(tval* v) {
     free(v);
 }
 
+tval* tval_read_num(mpc_ast_t* t){
+    errno = 0;
+    long x = strtol(t->contents, NULL, 10);
+    return errno != ERANGE ? tval_num(x) : tval_err("Invalid Number");
+}
+
+tval* tval_add(tval* v, tval* x){
+    v->count += 1;
+    v->cell = realloc(v->cell, sizeof(tval*) * v->count);
+    v->cell[v->count-1] = x;
+    return v;
+}
+
+tval* tval_read(mpc_ast_t* t){
+    if(strstr(t->tag, "number")) { return tval_read_num(t);}
+    if(strstr(t->tag, "symbol")) { return tval_sym(t->contents);}
+
+    tval* x = NULL;
+    if(!strcmp(t->tag, ">")) { x = tval_syexpr(); }
+    if(strstr(t->tag, "syexpr")) { x = tval_syexpr(); }
+
+    for(int i = 0; i<t->children_num; i++){
+        if(!strcmp(t->children[i]->contents, "(")) {continue;}
+        if(!strcmp(t->children[i]->contents, ")")) {continue;}
+        if(!strcmp(t->children[i]->tag, "regex")) {continue;}
+
+        x = tval_add(x, tval_read(t->children[i]));
+    }
+    return x;
+}
+
+
 void tval_print(tval v){
     switch (v.type)
     {
