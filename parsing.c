@@ -139,73 +139,75 @@ tval* tval_read(mpc_ast_t* t){
     }
     return x;
 }
+void tval_print(tval* v);
 
+void tval_syexpr_print(tval* v, char open, char close){
+    putchar(open);
 
-void tval_print(tval v){
-    switch (v.type)
-    {
-    case TVAL_NUM:
-        printf("%li", v.num);
-        break;
-    case TVAL_ERR:
-        if(v.err==TERR_DIV_ZERO){
-            printf("Error: Division By Zero!");
+    for(int i = 0; i<v->count; i++){
+        tval_print(v->cell[i]);
+        //for no trailing space after the last element 
+        if(i!=v->count-1){
+            putchar(' ');
         }
-        if(v.err==TERR_INV_OP){
-            printf("Error: Invaild Operation!");
-        }
-        if (v.err==TERR_BAD_NUM)
-        {
-            printf("Error: Invaild Number!");
-        }
-    break;
+    }
+    putchar(close);
+}
+
+void tval_print(tval* v){
+    switch(v->type){
+        case TVAL_NUM: printf("%li", v->num); break;
+        case TVAL_SYM: printf("%s", v->sym); break;
+        case TVAL_ERR: printf("Error: %s", v->sym); break;
+        case TVAL_SYEXPR: tval_syexpr_print(v, '(', ')'); break;
     }
 }
+
 // seperate function for printing line
-void tval_println(tval v){ 
+void tval_println(tval* v){ 
     tval_print(v);
     putchar('\n');
 }
 
-tval eval_operation(tval x, char* op, tval y){
+// tval eval_operation(tval x, char* op, tval y){
 
-    if(x.type==TVAL_ERR){ return x; }
-    if(y.type==TVAL_ERR){ return y; }
+//     if(x.type==TVAL_ERR){ return x; }
+//     if(y.type==TVAL_ERR){ return y; }
 
-    if(!strcmp(op, "+")){ return tval_num(x.num+y.num); }
-    if(!strcmp(op, "-")){ return tval_num(x.num-y.num); }
-    if(!strcmp(op, "*")){ return tval_num(x.num*y.num); }
-    if(!strcmp(op, "%")){ return tval_num(x.num%y.num); }
-    if(!strcmp(op, "^")){ return tval_num((long) pow(x.num, y.num)); }
-    if(!strcmp(op, "/")){ 
-        // if(y.num==0){
-        //     return tval_err(TERR_DIV_ZERO);
-        // }else{
-        //     return tval_num(x.num/y.num); }
-        return y.num==0 ? tval_err(TERR_DIV_ZERO) : tval_num(x.num/y.num);
-        }
-    return tval_err(TERR_INV_OP);
-}
+//     if(!strcmp(op, "+")){ return tval_num(x.num+y.num); }
+//     if(!strcmp(op, "-")){ return tval_num(x.num-y.num); }
+//     if(!strcmp(op, "*")){ return tval_num(x.num*y.num); }
+//     if(!strcmp(op, "%")){ return tval_num(x.num%y.num); }
+//     if(!strcmp(op, "^")){ return tval_num((long) pow(x.num, y.num)); }
+//     if(!strcmp(op, "/")){ 
+//         // if(y.num==0){
+//         //     return tval_err(TERR_DIV_ZERO);
+//         // }else{
+//         //     return tval_num(x.num/y.num); }
+//         return y.num==0 ? tval_err(TERR_DIV_ZERO) : tval_num(x.num/y.num);
+//         }
+//     return tval_err(TERR_INV_OP);
+// }
 
 
-tval eval(mpc_ast_t* t){
-    if(strstr(t->tag, "number")) {
-        errno = 0;
-        long x = strtol(t->contents, NULL, 10);
-        return errno != ERANGE ? tval_num(x) : tval_err(TERR_BAD_NUM);
-    }
+// tval eval(mpc_ast_t* t){
+//     if(strstr(t->tag, "number")) {
+//         errno = 0;
+//         long x = strtol(t->contents, NULL, 10);
+//         return errno != ERANGE ? tval_num(x) : tval_err(TERR_BAD_NUM);
+//     }
 
-    char* op = t->children[1]->contents;
+//     char* op = t->children[1]->contents;
 
-    tval x = eval(t->children[2]);
+//     tval x = eval(t->children[2]);
 
-    int j = 3;
-    while(strstr(t->children[j]->tag, "expr")){
-        x = eval_operation(x, op, eval(t->children[j]));
-        j++;
-    }
-    return x;
-}
+//     int j = 3;
+//     while(strstr(t->children[j]->tag, "expr")){
+//         x = eval_operation(x, op, eval(t->children[j]));
+//         j++;
+//     }
+//     return x;
+// }
 
 int main(int argc, char **argv)
 {
@@ -225,13 +227,13 @@ int main(int argc, char **argv)
         number   :  /-?[0-9]+/ ;                            \
         symbol   :  '+' | '-' | '*' | '/' | '%' | '^' ;     \
         syexpr   : '(' <expr>* ')' ;                        \
-        expr     :  <number> | '(' <operator> <expr>+ ')' ; \
-        thorn    : /^/<operator> <expr>+/$/ ;               \
+        expr     :  <number> | <symbol> | <syexpr> ; \
+        thorn    : /^/<expr>* /$/ ;               \
         ",
     Number, Symbol, Syexpr, Expr, Thorn);
 
     // displays basic information
-    puts("Thorn version 0.0.4");
+    puts("Thorn version 0.0.5");
     puts("Press Ctrl+C to Exit\n");
 
     while (1)
@@ -246,8 +248,10 @@ int main(int argc, char **argv)
         mpc_result_t r;
         if(mpc_parse("<stdin>", input, Thorn, &r)){
             // mpc_ast_print(r.output);
-            tval result =  eval(r.output);
-            tval_println(result);
+            // tval result =  eval(r.output);
+            tval* x = tval_read(r.output);
+            tval_println(x);
+            tval_del(x);
             mpc_ast_delete(r.output);
         } else {
             mpc_err_print(r.error);
