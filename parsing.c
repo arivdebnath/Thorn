@@ -169,6 +169,24 @@ void tval_println(tval* v){
     putchar('\n');
 }
 
+//Functions for evaluating S-expressions
+tval* tval_pop(tval* v, int i){
+    //the required item
+    tval* x = v->cell[i];
+
+    // deleting the tval* x and moving the tval*s following it one place to the left in the cell array.
+    memmove(&v->cell[i], &v->cell[i+1], sizeof(tval*) * v->count-1);
+
+    v->count-- ;
+    v->cell = realloc(v->cell, sizeof(tval*) * v->count);
+    return x;
+}
+tval* tval_take(tval* v, int i){
+    tval* x = tval_pop(v, i);
+    tval_del(v);
+    return x;
+}
+
 // tval eval_operation(tval x, char* op, tval y){
 
 //     if(x.type==TVAL_ERR){ return x; }
