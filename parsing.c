@@ -187,6 +187,41 @@ tval* tval_take(tval* v, int i){
     return x;
 }
 
+tval* builtin_op(tval* a, char op){
+    for(int i=0; i<a->count; i++){
+        if(a->type!=TVAL_NUM){
+            tval_del(a);
+            return tval_err("Cannot operate on a non-number!");
+        }
+    }
+    tval* x = tval_pop(a, 0);
+
+    if(!strcmp(op,'-') && a->count==0){
+        x->num = -x->num;
+    }
+
+    while(a->count > 0){
+        tval* y = tval_pop(a, 0);
+
+        if(!strcmp(op, '+')){x->num += y->num ;}
+        if(!strcmp(op, '-')){x->num -= y->num ;}
+        if(!strcmp(op, '*')){x->num *= y->num ;}
+        if(!strcmp(op, '/')){
+            if(y->num==0){
+                tval_del(x); 
+                tval_del(y);
+                x = tval_err("Division By Zero!");
+                break;
+            }
+            x->num /= y->num;
+        }
+
+        tval_del(y);
+    }
+    tval_del(a);
+    return x;
+}
+
 // tval eval_operation(tval x, char* op, tval y){
 
 //     if(x.type==TVAL_ERR){ return x; }
