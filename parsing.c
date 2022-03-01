@@ -158,7 +158,7 @@ void tval_print(tval* v){
     switch(v->type){
         case TVAL_NUM: printf("%li", v->num); break;
         case TVAL_SYM: printf("%s", v->sym); break;
-        case TVAL_ERR: printf("Error: %s", v->sym); break;
+        case TVAL_ERR: printf("Error: %s", v->err); break;
         case TVAL_SYEXPR: tval_syexpr_print(v, '(', ')'); break;
     }
 }
@@ -187,26 +187,26 @@ tval* tval_take(tval* v, int i){
     return x;
 }
 
-tval* builtin_op(tval* a, char op){
+tval* builtin_op(tval* a, char* op){
     for(int i=0; i<a->count; i++){
-        if(a->type!=TVAL_NUM){
+        if(a->cell[i]->type!=TVAL_NUM){
             tval_del(a);
             return tval_err("Cannot operate on a non-number!");
         }
     }
     tval* x = tval_pop(a, 0);
 
-    if(!strcmp(op,'-') && a->count==0){
+    if(!strcmp(op,"-") && a->count==0){
         x->num = -x->num;
     }
 
     while(a->count > 0){
         tval* y = tval_pop(a, 0);
 
-        if(!strcmp(op, '+')){x->num += y->num ;}
-        if(!strcmp(op, '-')){x->num -= y->num ;}
-        if(!strcmp(op, '*')){x->num *= y->num ;}
-        if(!strcmp(op, '/')){
+        if(!strcmp(op, "+")){x->num += y->num ;}
+        if(!strcmp(op, "-")){x->num -= y->num ;}
+        if(!strcmp(op, "*")){x->num *= y->num ;}
+        if(!strcmp(op, "/")){
             if(y->num==0){
                 tval_del(x); 
                 tval_del(y);
@@ -220,6 +220,41 @@ tval* builtin_op(tval* a, char op){
     }
     tval_del(a);
     return x;
+}
+
+tval* tval_eval(tval* v);
+
+tval* tval_syexpr_eval(tval* v){
+    for(int i=0; i<v->count; i++){
+        v->cell[i] = tval_eval(v->cell[i]);
+    }
+
+    for(int i=0; i<v->count; i++){
+        if(v->cell[i]->type == TVAL_ERR){
+            return tval_take(v, i);
+        }
+    }
+    
+    if(v->count == 0){ return v; }
+    if(v->count == 1){ return tval_take(v, 0); }
+
+    tval* f = tval_pop(v, 0);
+
+    if(f->type!=TVAL_SYM){
+        tval_del(f);
+        tval_del(v);
+        return tval_err("Should begin with an operator!");
+    }
+
+    tval* result = builtin_op(v, f->sym);
+    tval_del(f);
+    return result;
+
+}
+
+tval* tval_eval(tval* v){
+    if(v->type == TVAL_SYEXPR) { return tval_syexpr_eval(v); }
+    return v;
 }
 
 // tval eval_operation(tval x, char* op, tval y){
@@ -302,10 +337,13 @@ int main(int argc, char **argv)
         if(mpc_parse("<stdin>", input, Thorn, &r)){
             // mpc_ast_print(r.output);
             // tval result =  eval(r.output);
-            tval* x = tval_read(r.output);
+            // tval* x = tval_read(r.output);
+            // tval_println(x);
+            // tval_del(x);
+            // mpc_ast_delete(r.output);
+            tval* x = tval_eval(tval_read(r.output));
             tval_println(x);
             tval_del(x);
-            mpc_ast_delete(r.output);
         } else {
             mpc_err_print(r.error);
             mpc_err_delete(r.error);
