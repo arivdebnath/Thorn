@@ -257,45 +257,6 @@ tval* tval_eval(tval* v){
     return v;
 }
 
-// tval eval_operation(tval x, char* op, tval y){
-
-//     if(x.type==TVAL_ERR){ return x; }
-//     if(y.type==TVAL_ERR){ return y; }
-
-//     if(!strcmp(op, "+")){ return tval_num(x.num+y.num); }
-//     if(!strcmp(op, "-")){ return tval_num(x.num-y.num); }
-//     if(!strcmp(op, "*")){ return tval_num(x.num*y.num); }
-//     if(!strcmp(op, "%")){ return tval_num(x.num%y.num); }
-//     if(!strcmp(op, "^")){ return tval_num((long) pow(x.num, y.num)); }
-//     if(!strcmp(op, "/")){ 
-//         // if(y.num==0){
-//         //     return tval_err(TERR_DIV_ZERO);
-//         // }else{
-//         //     return tval_num(x.num/y.num); }
-//         return y.num==0 ? tval_err(TERR_DIV_ZERO) : tval_num(x.num/y.num);
-//         }
-//     return tval_err(TERR_INV_OP);
-// }
-
-
-// tval eval(mpc_ast_t* t){
-//     if(strstr(t->tag, "number")) {
-//         errno = 0;
-//         long x = strtol(t->contents, NULL, 10);
-//         return errno != ERANGE ? tval_num(x) : tval_err(TERR_BAD_NUM);
-//     }
-
-//     char* op = t->children[1]->contents;
-
-//     tval x = eval(t->children[2]);
-
-//     int j = 3;
-//     while(strstr(t->children[j]->tag, "expr")){
-//         x = eval_operation(x, op, eval(t->children[j]));
-//         j++;
-//     }
-//     return x;
-// }
 
 int main(int argc, char **argv)
 {
@@ -332,15 +293,9 @@ int main(int argc, char **argv)
 
         add_history(input);
 
-        // printf("No no no %s\n", input);
         mpc_result_t r;
         if(mpc_parse("<stdin>", input, Thorn, &r)){
-            // mpc_ast_print(r.output);
-            // tval result =  eval(r.output);
-            // tval* x = tval_read(r.output);
-            // tval_println(x);
-            // tval_del(x);
-            // mpc_ast_delete(r.output);
+
             tval* x = tval_eval(tval_read(r.output));
             tval_println(x);
             tval_del(x);
