@@ -206,6 +206,8 @@ tval* builtin_op(tval* a, char* op){
         if(!strcmp(op, "+")){x->num += y->num ;}
         if(!strcmp(op, "-")){x->num -= y->num ;}
         if(!strcmp(op, "*")){x->num *= y->num ;}
+        if(!strcmp(op, "%")){x->num %= y->num ;}
+        if(!strcmp(op, "^")){x->num = (long) pow(x->num, y->num);}
         if(!strcmp(op, "/")){
             if(y->num==0){
                 tval_del(x); 
