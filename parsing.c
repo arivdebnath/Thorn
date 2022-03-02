@@ -42,7 +42,7 @@ int number_of_nodes(mpc_ast_t* t){
 }
 
 //enums
-enum{ TVAL_NUM, TVAL_ERR, TVAL_SYM, TVAL_SYEXPR};
+enum{ TVAL_NUM, TVAL_ERR, TVAL_SYM, TVAL_SYEXPR, TVAL_QEXPR};
 enum{ TERR_DIV_ZERO, TERR_INV_OP, TERR_BAD_NUM };
 
 // value struct
@@ -88,6 +88,14 @@ tval* tval_syexpr(void){
     return v;
 }
 
+tval* tval_qexpr(void){
+    tval* v = malloc(sizeof(tval));
+    v->type = TVAL_QEXPR;
+    v->count = 0;
+    v->cell = NULL;
+    return v;
+}
+
 // Function to delete the heap memory acquired from malloc
 void tval_del(tval* v) {
     switch(v->type){
@@ -101,6 +109,12 @@ void tval_del(tval* v) {
             break;
         case TVAL_SYEXPR:
             for(int i=0; i<v->count; i++){
+                tval_del(v->cell[i]);
+            }
+            free(v->cell);
+            break;
+        case TVAL_QEXPR:
+            for(int i = 0; i<v->count; i++){
                 tval_del(v->cell[i]);
             }
             free(v->cell);
@@ -129,10 +143,13 @@ tval* tval_read(mpc_ast_t* t){
     tval* x = NULL;
     if(!strcmp(t->tag, ">")) { x = tval_syexpr(); }
     if(strstr(t->tag, "syexpr")) { x = tval_syexpr(); }
+    if(strstr(t->tag, "qexpr")) { x = tval_qexpr(); }
 
     for(int i = 0; i<t->children_num; i++){
         if(!strcmp(t->children[i]->contents, "(")) {continue;}
         if(!strcmp(t->children[i]->contents, ")")) {continue;}
+        if(!strcmp(t->children[i]->contents, "{")) {continue;}
+        if(!strcmp(t->children[i]->contents, "}")) {continue;}
         if(!strcmp(t->children[i]->tag, "regex")) {continue;}
 
         x = tval_add(x, tval_read(t->children[i]));
@@ -160,6 +177,7 @@ void tval_print(tval* v){
         case TVAL_SYM: printf("%s", v->sym); break;
         case TVAL_ERR: printf("Error: %s", v->err); break;
         case TVAL_SYEXPR: tval_syexpr_print(v, '(', ')'); break;
+        case TVAL_QEXPR: tval_syexpr_print(v, '{', '}'); break;
     }
 }
 
@@ -272,16 +290,18 @@ int main(int argc, char **argv)
     mpc_parser_t *Number = mpc_new("number");
     mpc_parser_t *Symbol = mpc_new("symbol");
     mpc_parser_t *Syexpr = mpc_new("syexpr");
+    mpc_parser_t *Qexpr = mpc_new("qexpr");
 
     mpca_lang(MPCA_LANG_DEFAULT,
         "                                                   \
         number   :  /-?[0-9]+/ ;                            \
         symbol   :  '+' | '-' | '*' | '/' | '%' | '^' ;     \
         syexpr   : '(' <expr>* ')' ;                        \
-        expr     :  <number> | <symbol> | <syexpr> ; \
-        thorn    : /^/<expr>* /$/ ;               \
+        qexpr   : '{' <expr>* '}' ;                         \
+        expr     :  <number> | <symbol> | <syexpr> | <qexpr> ;        \
+        thorn    : /^/<expr>* /$/ ;                         \
         ",
-    Number, Symbol, Syexpr, Expr, Thorn);
+    Number, Symbol, Syexpr, Qexpr, Expr, Thorn);
 
     // displays basic information
     puts("Thorn version 0.0.5");
@@ -308,7 +328,7 @@ int main(int argc, char **argv)
         
         free(input);
     }
-    mpc_cleanup(5, Number, Symbol, Syexpr, Expr, Thorn);
+    mpc_cleanup(6, Number, Symbol, Syexpr, Qexpr, Expr, Thorn);
 
     return 0;
 }
