@@ -277,6 +277,31 @@ tval* tval_eval(tval* v){
     return v;
 }
 
+// Functions for  Q-expressions
+tval* builtin_head (tval* a){
+    if(a->count != 1){
+        tval_del(a);
+        return tval_err("Function 'head' only takes a single Argument");
+    }
+
+    if(a->cell[0]->type!=TVAL_QEXPR){
+        tval_del(a);
+        return tval_err("Function 'head' passed incorrect types!");
+    }
+
+    if(a->cell[0]->count == 0){
+        tval_del(a);
+        return tval_err("Function 'head' passed {}");
+    }
+
+    tval* x = tval_take(a, 0);
+
+    while(x->count > 1){
+        tval_del(tval_pop(x, 1));
+    }
+    return x;
+}
+
 
 int main(int argc, char **argv)
 {
@@ -295,9 +320,10 @@ int main(int argc, char **argv)
     mpca_lang(MPCA_LANG_DEFAULT,
         "                                                   \
         number   :  /-?[0-9]+/ ;                            \
-        symbol   :  '+' | '-' | '*' | '/' | '%' | '^' ;     \
+        symbol   :  '+' | '-' | '*' | '/' | '%' | '^'       \
+                    | \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" ; \
         syexpr   : '(' <expr>* ')' ;                        \
-        qexpr   : '{' <expr>* '}' ;                         \
+        qexpr    : '{' <expr>* '}' ;                         \
         expr     :  <number> | <symbol> | <syexpr> | <qexpr> ;        \
         thorn    : /^/<expr>* /$/ ;                         \
         ",
