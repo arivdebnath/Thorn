@@ -281,7 +281,7 @@ tval* tval_eval(tval* v){
 tval* builtin_head (tval* a){
     if(a->count != 1){
         tval_del(a);
-        return tval_err("Function 'head' only takes a single Argument");
+        return tval_err("Function 'head' takes only a single Argument");
     }
 
     if(a->cell[0]->type!=TVAL_QEXPR){
@@ -299,6 +299,24 @@ tval* builtin_head (tval* a){
     while(x->count > 1){
         tval_del(tval_pop(x, 1));
     }
+    return x;
+}
+
+tval* builtin_tail(tval* a){
+    if(a->count!=1){ 
+        tval_del(a);
+        return tval_err("Funtion 'tail' accepts only a single argument!");
+    }
+    if(a->cell[0]->type!=TVAL_QEXPR){
+        tval_del(a);
+        return tval_err("Function 'tail' passed incorrect types!");
+    }
+    if(a->cell[0]->count == 0){
+        tval_del(a);
+        return tval_err("Function 'tail' passed {}");
+    }
+    tval* x = tval_pop(a, 0);
+    tval_del(tval_pop(x, 0));
     return x;
 }
 
