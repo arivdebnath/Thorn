@@ -276,6 +276,12 @@ tval* tval_eval(tval* v){
     if(v->type == TVAL_SYEXPR) { return tval_syexpr_eval(v); }
     return v;
 }
+// Macro for error handling
+#define TASSERT(arg, cond, err) \
+    if(!(cond)){                \
+        tval_del(arg);          \
+        return tval_err(err);   \
+    }
 
 // Functions for  Q-expressions
 tval* builtin_head (tval* a){
