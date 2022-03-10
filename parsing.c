@@ -285,11 +285,11 @@ tval* tval_eval(tval* v){
 
 // Functions for  Q-expressions
 tval* builtin_head(tval* a){
-    TASSERT(a, a->count!=1, "Function 'head' passed too many arguments!");
+    TASSERT(a, a->count==1, "Function 'head' passed too many arguments!");
 
-    TASSERT(a, a->cell[0]->type!=TVAL_QEXPR, "Function 'head' passed incorrect type!");
+    TASSERT(a, a->cell[0]->type==TVAL_QEXPR, "Function 'head' passed incorrect type!");
 
-    TASSERT(a, a->cell[0]->count==0, "Function 'head' passed {}!");
+    TASSERT(a, a->cell[0]->count!=0, "Function 'head' passed {}!");
 
     tval* x = tval_take(a, 0);
 
@@ -323,11 +323,11 @@ tval* builtin_head(tval* a){
 // }
 
 tval* builtin_tail(tval* a){
-    TASSERT(a, a->count!=1, "Function 'tail' passed too many arguments!");
+    TASSERT(a, a->count==1, "Function 'tail' passed too many arguments!");
     
-    TASSERT(a, a->cell[0]->type!=TVAL_QEXPR, "Function 'tail' passed wronge argument type!");
+    TASSERT(a, a->cell[0]->type==TVAL_QEXPR, "Function 'tail' passed wronge argument type!");
 
-    TASSERT(a, a->cell[0]->count==0, "Function 'tail' passed {}!");
+    TASSERT(a, a->cell[0]->count!=0, "Function 'tail' passed {}!");
 
     tval* x = tval_take(a, 0);
     tval_del(tval_pop(x, 0));
