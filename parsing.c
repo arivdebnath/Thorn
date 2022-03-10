@@ -284,47 +284,73 @@ tval* tval_eval(tval* v){
     }
 
 // Functions for  Q-expressions
-tval* builtin_head (tval* a){
-    if(a->count != 1){
-        tval_del(a);
-        return tval_err("Function 'head' takes only a single Argument");
-    }
+tval* builtin_head(tval* a){
+    TASSERT(a, a->count!=1, "Function 'head' passed too many arguments!");
 
-    if(a->cell[0]->type!=TVAL_QEXPR){
-        tval_del(a);
-        return tval_err("Function 'head' passed incorrect types!");
-    }
+    TASSERT(a, a->cell[0]->type!=TVAL_QEXPR, "Function 'head' passed incorrect type!");
 
-    if(a->cell[0]->count == 0){
-        tval_del(a);
-        return tval_err("Function 'head' passed {}");
-    }
+    TASSERT(a, a->cell[0]->count==0, "Function 'head' passed {}!");
 
     tval* x = tval_take(a, 0);
 
-    while(x->count > 1){
+    while(x->count>1){
         tval_del(tval_pop(x, 1));
     }
     return x;
 }
+// tval* builtin_head (tval* a){
+//     if(a->count != 1){
+//         tval_del(a);
+//         return tval_err("Function 'head' takes only a single Argument");
+//     }
+
+//     if(a->cell[0]->type!=TVAL_QEXPR){
+//         tval_del(a);
+//         return tval_err("Function 'head' passed incorrect types!");
+//     }
+
+//     if(a->cell[0]->count == 0){
+//         tval_del(a);
+//         return tval_err("Function 'head' passed {}");
+//     }
+
+//     tval* x = tval_take(a, 0);
+
+//     while(x->count > 1){
+//         tval_del(tval_pop(x, 1));
+//     }
+//     return x;
+// }
 
 tval* builtin_tail(tval* a){
-    if(a->count!=1){ 
-        tval_del(a);
-        return tval_err("Funtion 'tail' accepts only a single argument!");
-    }
-    if(a->cell[0]->type!=TVAL_QEXPR){
-        tval_del(a);
-        return tval_err("Function 'tail' passed incorrect types!");
-    }
-    if(a->cell[0]->count == 0){
-        tval_del(a);
-        return tval_err("Function 'tail' passed {}");
-    }
-    tval* x = tval_pop(a, 0);
+    TASSERT(a, a->count!=1, "Function 'tail' passed too many arguments!");
+    
+    TASSERT(a, a->cell[0]->type!=TVAL_QEXPR, "Function 'tail' passed wronge argument type!");
+
+    TASSERT(a, a->cell[0]->count==0, "Function 'tail' passed {}!");
+
+    tval* x = tval_take(a, 0);
     tval_del(tval_pop(x, 0));
     return x;
 }
+
+// tval* builtin_tail(tval* a){
+//     if(a->count!=1){ 
+//         tval_del(a);
+//         return tval_err("Funtion 'tail' accepts only a single argument!");
+//     }
+//     if(a->cell[0]->type!=TVAL_QEXPR){
+//         tval_del(a);
+//         return tval_err("Function 'tail' passed incorrect types!");
+//     }
+//     if(a->cell[0]->count == 0){
+//         tval_del(a);
+//         return tval_err("Function 'tail' passed {}");
+//     }
+//     tval* x = tval_pop(a, 0);
+//     tval_del(tval_pop(x, 0));
+//     return x;
+// }
 
 
 int main(int argc, char **argv)
