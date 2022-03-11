@@ -325,7 +325,7 @@ tval* builtin_head(tval* a){
 tval* builtin_tail(tval* a){
     TASSERT(a, a->count==1, "Function 'tail' passed too many arguments!");
     
-    TASSERT(a, a->cell[0]->type==TVAL_QEXPR, "Function 'tail' passed wronge argument type!");
+    TASSERT(a, a->cell[0]->type==TVAL_QEXPR, "Function 'tail' passed wrong argument type!");
 
     TASSERT(a, a->cell[0]->count!=0, "Function 'tail' passed {}!");
 
@@ -352,6 +352,42 @@ tval* builtin_tail(tval* a){
 //     return x;
 // }
 
+tval* builtin_list(tval* a){
+    a->type=TVAL_SYEXPR;
+    return a;
+}
+
+tval* builtin_eval(tval* a){
+    TASSERT(a, a->count==1, "Function 'eval' passed too many arguments!");
+
+    TASSERT(a, a->cell[0]->type==TVAL_QEXPR, "Function 'eval' passed wrong type!");
+
+    tval* x = tval_take(a, 0);
+    x->type = TVAL_SYEXPR;
+    return tval_eval(x);
+
+}
+
+tval* builtin_join(tval* a){
+    for(int i=0; i<a->count; i++){
+        TASSERT(a, a->cell[i]->type==TVAL_QEXPR, "Function 'join' passed wrong type!");
+    }
+
+    tval* x = tval_pop(a, 0);
+
+    while(a->count){
+        x = tval_join(x, tval_pop(a, 0));
+    }
+    return x;
+}
+
+tval* tval_join(tval* x, tval* y){
+    while(y->count){
+        x = tval_add(x, tval_pop(y, 0));
+    }
+    tval_del(y);
+    return x;
+}
 
 int main(int argc, char **argv)
 {
