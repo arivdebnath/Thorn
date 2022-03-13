@@ -242,6 +242,7 @@ tval* builtin_op(tval* a, char* op){
     return x;
 }
 
+tval* builtin(tval* a, char* func);
 tval* tval_eval(tval* v);
 
 tval* tval_syexpr_eval(tval* v){
@@ -266,7 +267,7 @@ tval* tval_syexpr_eval(tval* v){
         return tval_err("Should begin with an operator!");
     }
 
-    tval* result = builtin_op(v, f->sym);
+    tval* result = builtin(v, f->sym);
     tval_del(f);
     return result;
 
@@ -353,7 +354,7 @@ tval* builtin_tail(tval* a){
 // }
 
 tval* builtin_list(tval* a){
-    a->type=TVAL_SYEXPR;
+    a->type=TVAL_QEXPR;
     return a;
 }
 
@@ -367,6 +368,8 @@ tval* builtin_eval(tval* a){
     return tval_eval(x);
 
 }
+
+tval* tval_join(tval* x, tval* y);
 
 tval* builtin_join(tval* a){
     for(int i=0; i<a->count; i++){
@@ -387,6 +390,18 @@ tval* tval_join(tval* x, tval* y){
     }
     tval_del(y);
     return x;
+}
+
+tval* builtin(tval* a, char* func){
+    if(!strcmp("list", func)){ return builtin_list(a); }
+    if(!strcmp("join", func)){ return builtin_join(a); }
+    if(!strcmp("tail", func)){ return builtin_tail(a); }
+    if(!strcmp("head", func)){ return builtin_head(a); }
+    if(!strcmp("eval", func)){ return builtin_eval(a); }
+    if(strstr("+-*/^%", func)) { return builtin_op(a, func); }
+
+    tval_del(a);
+    return tval_err("Unknown operation or function!");
 }
 
 int main(int argc, char **argv)
