@@ -381,8 +381,7 @@ int main(int argc, char **argv)
     mpca_lang(MPCA_LANG_DEFAULT,
         "                                                   \
         number   :  /-?[0-9]+/ ;                            \
-        symbol   :  '+' | '-' | '*' | '/' | '%' | '^'       \
-                    | \"list\" | \"head\" | \"tail\" | \"join\" | \"eval\" ; \
+        symbol   : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&^]+/;       \
         syexpr   : '(' <expr>* ')' ;                        \
         qexpr    : '{' <expr>* '}' ;                         \
         expr     :  <number> | <symbol> | <syexpr> | <qexpr> ;        \
