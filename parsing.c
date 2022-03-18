@@ -41,9 +41,18 @@ int number_of_nodes(mpc_ast_t* t){
     return 0;
 }
 
+// struct declarations 
+struct tval;
+struct tenv;
+typedef struct tval tval;
+typedef struct tenv tenv;
+
 //enums
-enum{ TVAL_NUM, TVAL_ERR, TVAL_SYM, TVAL_SYEXPR, TVAL_QEXPR};
+enum{ TVAL_NUM, TVAL_ERR, TVAL_SYM, TVAL_FUNC, TVAL_SYEXPR, TVAL_QEXPR};
 enum{ TERR_DIV_ZERO, TERR_INV_OP, TERR_BAD_NUM };
+
+// function pointer
+typedef tval* ( *tbuiltin )(tval*, tenv*);
 
 // value struct
 typedef struct tval{
@@ -52,9 +61,10 @@ typedef struct tval{
     // Error and Symbol/operator
     char* err;
     char* sym;
+    tbuiltin func;
     // Count and pointer to a list of tval*
     int count;
-    struct tval** cell;
+    tval** cell;
 }tval;
 
 tval* tval_num(long x){
@@ -78,6 +88,13 @@ tval* tval_sym(char* s){
     v->sym = malloc(strlen(s)+1);
     strcpy(v->sym, s);
     return v;
+}
+
+tval* tval_func(tbuiltin funct){
+    tval* v = malloc(sizeof(tval));
+    v->type = TVAL_FUNC;
+    v->func = funct;
+    return v; 
 }
 
 tval* tval_syexpr(void){
@@ -106,6 +123,8 @@ void tval_del(tval* v) {
             break;
         case TVAL_SYM:
             free(v->sym);
+            break;
+        case TVAL_FUNC:
             break;
         case TVAL_SYEXPR:
             for(int i=0; i<v->count; i++){
@@ -176,6 +195,7 @@ void tval_print(tval* v){
         case TVAL_NUM: printf("%li", v->num); break;
         case TVAL_SYM: printf("%s", v->sym); break;
         case TVAL_ERR: printf("Error: %s", v->err); break;
+        case TVAL_FUNC: printf("<function>"); break;
         case TVAL_SYEXPR: tval_syexpr_print(v, '(', ')'); break;
         case TVAL_QEXPR: tval_syexpr_print(v, '{', '}'); break;
     }
