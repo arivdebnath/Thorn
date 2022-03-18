@@ -242,6 +242,7 @@ tval* builtin_op(tval* a, char* op){
     return x;
 }
 
+tval* builtin(tval* a, char* func);
 tval* tval_eval(tval* v);
 
 tval* tval_syexpr_eval(tval* v){
@@ -266,7 +267,7 @@ tval* tval_syexpr_eval(tval* v){
         return tval_err("Should begin with an operator!");
     }
 
-    tval* result = builtin_op(v, f->sym);
+    tval* result = builtin(v, f->sym);
     tval_del(f);
     return result;
 
@@ -276,7 +277,92 @@ tval* tval_eval(tval* v){
     if(v->type == TVAL_SYEXPR) { return tval_syexpr_eval(v); }
     return v;
 }
+// Macro for error handling
+#define TASSERT(arg, cond, err) \
+    if(!(cond)){                \
+        tval_del(arg);          \
+        return tval_err(err);   \
+    }
 
+// Functions for  Q-expressions
+tval* builtin_head(tval* a){
+    TASSERT(a, a->count==1, "Function 'head' passed too many arguments!");
+
+    TASSERT(a, a->cell[0]->type==TVAL_QEXPR, "Function 'head' passed incorrect type!");
+
+    TASSERT(a, a->cell[0]->count!=0, "Function 'head' passed {}!");
+
+    tval* x = tval_take(a, 0);
+
+    while(x->count>1){
+        tval_del(tval_pop(x, 1));
+    }
+    return x;
+}
+
+tval* builtin_tail(tval* a){
+    TASSERT(a, a->count==1, "Function 'tail' passed too many arguments!");
+    
+    TASSERT(a, a->cell[0]->type==TVAL_QEXPR, "Function 'tail' passed wrong argument type!");
+
+    TASSERT(a, a->cell[0]->count!=0, "Function 'tail' passed {}!");
+
+    tval* x = tval_take(a, 0);
+    tval_del(tval_pop(x, 0));
+    return x;
+}
+
+
+tval* builtin_list(tval* a){
+    a->type=TVAL_QEXPR;
+    return a;
+}
+
+tval* builtin_eval(tval* a){
+    TASSERT(a, a->count==1, "Function 'eval' passed too many arguments!");
+
+    TASSERT(a, a->cell[0]->type==TVAL_QEXPR, "Function 'eval' passed wrong type!");
+
+    tval* x = tval_take(a, 0);
+    x->type = TVAL_SYEXPR;
+    return tval_eval(x);
+
+}
+
+tval* tval_join(tval* x, tval* y);
+
+tval* builtin_join(tval* a){
+    for(int i=0; i<a->count; i++){
+        TASSERT(a, a->cell[i]->type==TVAL_QEXPR, "Function 'join' passed wrong type!");
+    }
+
+    tval* x = tval_pop(a, 0);
+
+    while(a->count){
+        x = tval_join(x, tval_pop(a, 0));
+    }
+    return x;
+}
+
+tval* tval_join(tval* x, tval* y){
+    while(y->count){
+        x = tval_add(x, tval_pop(y, 0));
+    }
+    tval_del(y);
+    return x;
+}
+
+tval* builtin(tval* a, char* func){
+    if(!strcmp("list", func)){ return builtin_list(a); }
+    if(!strcmp("join", func)){ return builtin_join(a); }
+    if(!strcmp("tail", func)){ return builtin_tail(a); }
+    if(!strcmp("head", func)){ return builtin_head(a); }
+    if(!strcmp("eval", func)){ return builtin_eval(a); }
+    if(strstr("+-*/^%", func)) { return builtin_op(a, func); }
+
+    tval_del(a);
+    return tval_err("Unknown operation or function!");
+}
 
 int main(int argc, char **argv)
 {
@@ -295,9 +381,9 @@ int main(int argc, char **argv)
     mpca_lang(MPCA_LANG_DEFAULT,
         "                                                   \
         number   :  /-?[0-9]+/ ;                            \
-        symbol   :  '+' | '-' | '*' | '/' | '%' | '^' ;     \
+        symbol   : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&^]+/;       \
         syexpr   : '(' <expr>* ')' ;                        \
-        qexpr   : '{' <expr>* '}' ;                         \
+        qexpr    : '{' <expr>* '}' ;                         \
         expr     :  <number> | <symbol> | <syexpr> | <qexpr> ;        \
         thorn    : /^/<expr>* /$/ ;                         \
         ",
