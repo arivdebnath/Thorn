@@ -67,6 +67,40 @@ typedef struct tval{
     tval** cell;
 }tval;
 
+tval* tval_copy(tval* v){
+    tval* x = malloc(sizeof(tval));
+    x->type = v->type;
+    
+    switch(v->type){
+        case TVAL_FUNC:
+            x->func = v->func;
+            break;
+        case TVAL_NUM:
+            x->num = v->num;
+            break;
+
+        case TVAL_ERR:
+            x->err = malloc(strlen(v->err)+1);
+            strcpy(x->err, v->err);
+            break;
+
+        case TVAL_SYM:
+            x->sym = malloc(strlen(v->sym)+1);
+            strcpy(x->sym, v->sym);
+            break;
+
+        case TVAL_SYEXPR:
+        case TVAL_QEXPR:
+            x->count = v->count;
+            x->cell = malloc(sizeof(tval*)*v->count);
+            for(int i=0; i<v->count; i++){
+                x->cell[i] = tval_copy(v->cell[i]);
+            }
+            break;
+    }
+    return x;
+}
+
 tval* tval_num(long x){
     tval* v = malloc(sizeof(tval));
     v->type = TVAL_NUM;
