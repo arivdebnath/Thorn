@@ -67,6 +67,12 @@ typedef struct tval{
     tval** cell;
 }tval;
 
+struct tenv{
+    int count;
+    char** syms;
+    tval** vals;    
+};
+
 tval* tval_copy(tval* v){
     tval* x = malloc(sizeof(tval));
     x->type = v->type;
