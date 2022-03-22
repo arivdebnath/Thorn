@@ -73,6 +73,23 @@ struct tenv{
     tval** vals;    
 };
 
+tenv* tenv_new(void){
+    tenv* e = malloc(sizeof(tenv));
+    e -> count = 0;
+    e->syms = NULL;
+    e->vals = NULL;
+}
+
+void tenv_del(tenv* e){
+    for(int i=0; i<e->count; i++){
+        free(e->syms[i]);
+        tval_del(e->vals[i]);
+    }
+    free(e->syms);
+    free(e->vals);
+    free(e);
+}
+
 tval* tval_copy(tval* v){
     tval* x = malloc(sizeof(tval));
     x->type = v->type;
