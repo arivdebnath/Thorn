@@ -90,6 +90,33 @@ void tenv_del(tenv* e){
     free(e);
 }
 
+tval* tenv_get(tenv* e, tval* k){
+    for(int i=0; i<e->count; i++){
+        if(!strcmp( e->syms[i], k->sym)){
+            return tval_copy(e->vals[i]);
+        }
+    }
+    tval_err("unbound symbol!");
+}
+
+void tenv_put(tenv* e, tval* k, tval* v){
+    for (int i=0; i<e->count; i++){
+        if(!strcmp(e->syms[i], k->sym )){
+            tval_del(e->vals[i]);
+            e->vals[i] = tval_copy(v);
+            return;
+        }
+    }
+
+    e->count++;
+    e->syms = realloc(e->syms, sizeof(char*)*e->count);
+    e->vals = realloc(e->vals, sizeof(tval*)*e->count);
+
+    e->vals[e->count-1] = tval_copy(v);
+    e->syms[e->count-1] = malloc(strlen(k->sym-1));
+    strcpy(e->syms[e->count-1], k->sym);
+}
+
 tval* tval_copy(tval* v){
     tval* x = malloc(sizeof(tval));
     x->type = v->type;
