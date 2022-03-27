@@ -52,10 +52,10 @@ enum{ TVAL_NUM, TVAL_ERR, TVAL_SYM, TVAL_FUNC, TVAL_SYEXPR, TVAL_QEXPR};
 enum{ TERR_DIV_ZERO, TERR_INV_OP, TERR_BAD_NUM };
 
 // function pointer
-typedef tval* ( *tbuiltin )(tval*, tenv*);
+typedef tval* ( *tbuiltin )(tenv*, tval*);
 
 // value struct
-typedef struct tval{
+struct tval{
     int type;
     long num;
     // Error and Symbol/operator
@@ -65,7 +65,9 @@ typedef struct tval{
     // Count and pointer to a list of tval*
     int count;
     tval** cell;
-}tval;
+};
+
+// --- environment ---
 
 struct tenv{
     int count;
@@ -75,11 +77,13 @@ struct tenv{
 
 tenv* tenv_new(void){
     tenv* e = malloc(sizeof(tenv));
-    e -> count = 0;
+    e->count = 0;
     e->syms = NULL;
     e->vals = NULL;
+    return e;
 }
 
+void tval_del(tval* v);
 void tenv_del(tenv* e){
     for(int i=0; i<e->count; i++){
         free(e->syms[i]);
@@ -89,6 +93,9 @@ void tenv_del(tenv* e){
     free(e->vals);
     free(e);
 }
+tval* tval_copy(tval* v);
+
+tval* tval_err(char* m);
 
 tval* tenv_get(tenv* e, tval* k){
     for(int i=0; i<e->count; i++){
@@ -96,9 +103,8 @@ tval* tenv_get(tenv* e, tval* k){
             return tval_copy(e->vals[i]);
         }
     }
-    tval_err("unbound symbol!");
+    return tval_err("unbound symbol!");
 }
-
 void tenv_put(tenv* e, tval* k, tval* v){
     for (int i=0; i<e->count; i++){
         if(!strcmp(e->syms[i], k->sym )){
@@ -113,9 +119,10 @@ void tenv_put(tenv* e, tval* k, tval* v){
     e->vals = realloc(e->vals, sizeof(tval*)*e->count);
 
     e->vals[e->count-1] = tval_copy(v);
-    e->syms[e->count-1] = malloc(strlen(k->sym-1));
+    e->syms[e->count-1] = malloc(strlen(k->sym)+1);
     strcpy(e->syms[e->count-1], k->sym);
 }
+// ------------------------------------
 
 tval* tval_copy(tval* v){
     tval* x = malloc(sizeof(tval));
@@ -140,6 +147,12 @@ tval* tval_copy(tval* v){
             break;
 
         case TVAL_SYEXPR:
+            x->count = v->count;
+            x->cell = malloc(sizeof(tval*)*v->count);
+            for(int i=0; i<v->count; i++){
+                x->cell[i] = tval_copy(v->cell[i]);
+            }
+            break;
         case TVAL_QEXPR:
             x->count = v->count;
             x->cell = malloc(sizeof(tval*)*v->count);
@@ -300,7 +313,7 @@ tval* tval_pop(tval* v, int i){
     memmove(&v->cell[i], &v->cell[i+1], sizeof(tval*) * v->count-1);
 
     v->count-- ;
-    v->cell = realloc(v->cell, sizeof(tval*) * v->count);
+    v->cell = realloc(v->cell, sizeof(tval *) * v->count);
     return x;
 }
 tval* tval_take(tval* v, int i){
@@ -309,7 +322,7 @@ tval* tval_take(tval* v, int i){
     return x;
 }
 
-tval* builtin_op(tval* a, char* op){
+tval* builtin_op(tenv* e, tval* a, char* op){
     for(int i=0; i<a->count; i++){
         if(a->cell[i]->type!=TVAL_NUM){
             tval_del(a);
@@ -346,12 +359,12 @@ tval* builtin_op(tval* a, char* op){
     return x;
 }
 
-tval* builtin(tval* a, char* func);
-tval* tval_eval(tval* v);
+tval* builtin(tenv* e, tval* a, char* func);
+tval* tval_eval(tenv* e, tval* v);
 
-tval* tval_syexpr_eval(tval* v){
+tval* tval_syexpr_eval(tenv* e, tval* v){
     for(int i=0; i<v->count; i++){
-        v->cell[i] = tval_eval(v->cell[i]);
+        v->cell[i] = tval_eval(e, v->cell[i]);
     }
 
     for(int i=0; i<v->count; i++){
@@ -365,20 +378,25 @@ tval* tval_syexpr_eval(tval* v){
 
     tval* f = tval_pop(v, 0);
 
-    if(f->type!=TVAL_SYM){
+    if(f->type!=TVAL_FUNC){
         tval_del(f);
         tval_del(v);
-        return tval_err("Should begin with an operator!");
+        return tval_err("Should begin with an function!");
     }
 
-    tval* result = builtin(v, f->sym);
+    tval* result = f->func(e, f);
     tval_del(f);
     return result;
 
 }
 
-tval* tval_eval(tval* v){
-    if(v->type == TVAL_SYEXPR) { return tval_syexpr_eval(v); }
+tval* tval_eval(tenv* e, tval* v){
+    if(v->type == TVAL_SYM){
+        tval* x = tenv_get(e, v);
+        tval_del(v);
+        return x;
+    }
+    if(v->type == TVAL_SYEXPR) { return tval_syexpr_eval(e, v); }
     return v;
 }
 // Macro for error handling
@@ -389,7 +407,7 @@ tval* tval_eval(tval* v){
     }
 
 // Functions for  Q-expressions
-tval* builtin_head(tval* a){
+tval* builtin_head(tenv* e, tval* a){
     TASSERT(a, a->count==1, "Function 'head' passed too many arguments!");
 
     TASSERT(a, a->cell[0]->type==TVAL_QEXPR, "Function 'head' passed incorrect type!");
@@ -404,7 +422,7 @@ tval* builtin_head(tval* a){
     return x;
 }
 
-tval* builtin_tail(tval* a){
+tval* builtin_tail(tenv* e, tval* a){
     TASSERT(a, a->count==1, "Function 'tail' passed too many arguments!");
     
     TASSERT(a, a->cell[0]->type==TVAL_QEXPR, "Function 'tail' passed wrong argument type!");
@@ -417,25 +435,25 @@ tval* builtin_tail(tval* a){
 }
 
 
-tval* builtin_list(tval* a){
+tval* builtin_list(tenv* e, tval* a){
     a->type=TVAL_QEXPR;
     return a;
 }
 
-tval* builtin_eval(tval* a){
+tval* builtin_eval(tenv* e, tval* a){
     TASSERT(a, a->count==1, "Function 'eval' passed too many arguments!");
 
     TASSERT(a, a->cell[0]->type==TVAL_QEXPR, "Function 'eval' passed wrong type!");
 
     tval* x = tval_take(a, 0);
     x->type = TVAL_SYEXPR;
-    return tval_eval(x);
+    return tval_eval(e, x);
 
 }
 
 tval* tval_join(tval* x, tval* y);
 
-tval* builtin_join(tval* a){
+tval* builtin_join(tenv* e, tval* a){
     for(int i=0; i<a->count; i++){
         TASSERT(a, a->cell[i]->type==TVAL_QEXPR, "Function 'join' passed wrong type!");
     }
@@ -443,8 +461,10 @@ tval* builtin_join(tval* a){
     tval* x = tval_pop(a, 0);
 
     while(a->count){
-        x = tval_join(x, tval_pop(a, 0));
+        tval* y = tval_pop(a, 0);
+        x = tval_join(x, y);
     }
+    tval_del(a);
     return x;
 }
 
@@ -456,16 +476,63 @@ tval* tval_join(tval* x, tval* y){
     return x;
 }
 
-tval* builtin(tval* a, char* func){
-    if(!strcmp("list", func)){ return builtin_list(a); }
-    if(!strcmp("join", func)){ return builtin_join(a); }
-    if(!strcmp("tail", func)){ return builtin_tail(a); }
-    if(!strcmp("head", func)){ return builtin_head(a); }
-    if(!strcmp("eval", func)){ return builtin_eval(a); }
-    if(strstr("+-*/^%", func)) { return builtin_op(a, func); }
+tval* builtin(tenv* e, tval* a, char* op){
+    if(!strcmp("list", op)){ return builtin_list(e, a); }
+    if(!strcmp("join", op)){ return builtin_join(e, a); }
+    if(!strcmp("tail", op)){ return builtin_tail(e, a); }
+    if(!strcmp("head", op)){ return builtin_head(e, a); }
+    if(!strcmp("eval", op)){ return builtin_eval(e, a); }
+    if(strstr("+-*/^%", op)) { return builtin_op(e, a, op); }
 
     tval_del(a);
     return tval_err("Unknown operation or function!");
+}
+
+tval* builtin_add(tenv* e, tval* a){
+    return builtin_op(e, a, "+");
+}
+tval* builtin_sub(tenv* e, tval* a){
+    return builtin_op(e, a, "-");
+}
+tval* builtin_mul(tenv* e, tval* a){
+    return builtin_op(e, a, "*");
+}
+tval* builtin_div(tenv* e, tval* a){
+    return builtin_op(e, a, "/");
+}
+tval* builtin_mod(tenv* e, tval* a){
+    return builtin_op(e, a, "%");
+}
+tval* builtin_pow(tenv* e, tval* a){
+    return builtin_op(e, a, "^");
+}
+
+// Putting builtins in environment
+
+void tenv_add_builtin(tenv* e, char* name, tbuiltin func){
+    tval* k = tval_sym(name);
+    tval* v = tval_func(func);
+    tenv_put(e, k, v);
+    tval_del(v);
+    tval_del(k);
+}
+
+void tenv_add_builtins(tenv* e){
+    // list functions
+    tenv_add_builtin(e, "list", builtin_list);
+    tenv_add_builtin(e, "head", builtin_head);
+    tenv_add_builtin(e, "join", builtin_join);
+    tenv_add_builtin(e, "tail", builtin_tail);
+    tenv_add_builtin(e, "eval", builtin_eval);
+
+    // Mathematical functions
+    tenv_add_builtin(e, "+", builtin_add);
+    tenv_add_builtin(e, "-", builtin_sub);
+    tenv_add_builtin(e, "*", builtin_mul);
+    tenv_add_builtin(e, "/", builtin_div);
+    tenv_add_builtin(e, "^", builtin_pow);
+    tenv_add_builtin(e, "%", builtin_mod);
+
 }
 
 int main(int argc, char **argv)
@@ -485,7 +552,7 @@ int main(int argc, char **argv)
     mpca_lang(MPCA_LANG_DEFAULT,
         "                                                   \
         number   :  /-?[0-9]+/ ;                            \
-        symbol   : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&^]+/;       \
+        symbol   : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&^\\%]+/;       \
         syexpr   : '(' <expr>* ')' ;                        \
         qexpr    : '{' <expr>* '}' ;                         \
         expr     :  <number> | <symbol> | <syexpr> | <qexpr> ;        \
@@ -494,9 +561,11 @@ int main(int argc, char **argv)
     Number, Symbol, Syexpr, Qexpr, Expr, Thorn);
 
     // displays basic information
-    puts("Thorn version 0.0.5");
+    puts("Thorn version 0.0.6");
     puts("Press Ctrl+C to Exit\n");
 
+    tenv* e = tenv_new();
+    tenv_add_builtins(e);
     while (1)
     {
 
@@ -508,9 +577,10 @@ int main(int argc, char **argv)
         mpc_result_t r;
         if(mpc_parse("<stdin>", input, Thorn, &r)){
 
-            tval* x = tval_eval(tval_read(r.output));
+            tval* x = tval_eval(e, tval_read(r.output));
             tval_println(x);
             tval_del(x);
+            mpc_ast_delete(r.output);
         } else {
             mpc_err_print(r.error);
             mpc_err_delete(r.error);
@@ -518,6 +588,7 @@ int main(int argc, char **argv)
         
         free(input);
     }
+    tenv_del(e);
     mpc_cleanup(6, Number, Symbol, Syexpr, Qexpr, Expr, Thorn);
 
     return 0;
