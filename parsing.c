@@ -67,103 +67,6 @@ struct tval{
     tval** cell;
 };
 
-// --- environment ---
-
-struct tenv{
-    int count;
-    char** syms;
-    tval** vals;    
-};
-
-tenv* tenv_new(void){
-    tenv* e = malloc(sizeof(tenv));
-    e->count = 0;
-    e->syms = NULL;
-    e->vals = NULL;
-    return e;
-}
-
-void tval_del(tval* v);
-void tenv_del(tenv* e){
-    for(int i=0; i<e->count; i++){
-        free(e->syms[i]);
-        tval_del(e->vals[i]);
-    }
-    free(e->syms);
-    free(e->vals);
-    free(e);
-}
-tval* tval_copy(tval* v);
-
-tval* tval_err(char* m);
-
-tval* tenv_get(tenv* e, tval* k){
-    for(int i=0; i<e->count; i++){
-        if(!strcmp( e->syms[i], k->sym)){
-            return tval_copy(e->vals[i]);
-        }
-    }
-    return tval_err("unbound symbol!");
-}
-void tenv_put(tenv* e, tval* k, tval* v){
-    for (int i=0; i<e->count; i++){
-        if(!strcmp(e->syms[i], k->sym )){
-            tval_del(e->vals[i]);
-            e->vals[i] = tval_copy(v);
-            return;
-        }
-    }
-
-    e->count++;
-    e->syms = realloc(e->syms, sizeof(char*)*e->count);
-    e->vals = realloc(e->vals, sizeof(tval*)*e->count);
-
-    e->vals[e->count-1] = tval_copy(v);
-    e->syms[e->count-1] = malloc(strlen(k->sym)+1);
-    strcpy(e->syms[e->count-1], k->sym);
-}
-// ------------------------------------
-
-tval* tval_copy(tval* v){
-    tval* x = malloc(sizeof(tval));
-    x->type = v->type;
-    
-    switch(v->type){
-        case TVAL_FUNC:
-            x->func = v->func;
-            break;
-        case TVAL_NUM:
-            x->num = v->num;
-            break;
-
-        case TVAL_ERR:
-            x->err = malloc(strlen(v->err)+1);
-            strcpy(x->err, v->err);
-            break;
-
-        case TVAL_SYM:
-            x->sym = malloc(strlen(v->sym)+1);
-            strcpy(x->sym, v->sym);
-            break;
-
-        case TVAL_SYEXPR:
-            x->count = v->count;
-            x->cell = malloc(sizeof(tval*)*v->count);
-            for(int i=0; i<v->count; i++){
-                x->cell[i] = tval_copy(v->cell[i]);
-            }
-            break;
-        case TVAL_QEXPR:
-            x->count = v->count;
-            x->cell = malloc(sizeof(tval*)*v->count);
-            for(int i=0; i<v->count; i++){
-                x->cell[i] = tval_copy(v->cell[i]);
-            }
-            break;
-    }
-    return x;
-}
-
 tval* tval_num(long x){
     tval* v = malloc(sizeof(tval));
     v->type = TVAL_NUM;
@@ -239,6 +142,46 @@ void tval_del(tval* v) {
     free(v);
 }
 
+tval* tval_copy(tval* v){
+    tval* x = malloc(sizeof(tval));
+    x->type = v->type;
+    
+    switch(v->type){
+        case TVAL_FUNC:
+            x->func = v->func;
+            break;
+        case TVAL_NUM:
+            x->num = v->num;
+            break;
+
+        case TVAL_ERR:
+            x->err = malloc(strlen(v->err)+1);
+            strcpy(x->err, v->err);
+            break;
+
+        case TVAL_SYM:
+            x->sym = malloc(strlen(v->sym)+1);
+            strcpy(x->sym, v->sym);
+            break;
+
+        case TVAL_SYEXPR:
+            x->count = v->count;
+            x->cell = malloc(sizeof(tval*)*v->count);
+            for(int i=0; i<v->count; i++){
+                x->cell[i] = tval_copy(v->cell[i]);
+            }
+            break;
+        case TVAL_QEXPR:
+            x->count = v->count;
+            x->cell = malloc(sizeof(tval*)*v->count);
+            for(int i=0; i<v->count; i++){
+                x->cell[i] = tval_copy(v->cell[i]);
+            }
+            break;
+    }
+    return x;
+}
+
 tval* tval_read_num(mpc_ast_t* t){
     errno = 0;
     long x = strtol(t->contents, NULL, 10);
@@ -303,6 +246,63 @@ void tval_println(tval* v){
     tval_print(v);
     putchar('\n');
 }
+
+// --- environment ---
+
+struct tenv{
+    int count;
+    char** syms;
+    tval** vals;    
+};
+
+tenv* tenv_new(void){
+    tenv* e = malloc(sizeof(tenv));
+    e->count = 0;
+    e->syms = NULL;
+    e->vals = NULL;
+    return e;
+}
+
+void tval_del(tval* v);
+void tenv_del(tenv* e){
+    for(int i=0; i<e->count; i++){
+        free(e->syms[i]);
+        tval_del(e->vals[i]);
+    }
+    free(e->syms);
+    free(e->vals);
+    free(e);
+}
+tval* tval_copy(tval* v);
+
+tval* tval_err(char* m);
+
+tval* tenv_get(tenv* e, tval* k){
+    for(int i=0; i<e->count; i++){
+        if(!strcmp( e->syms[i], k->sym)){
+            return tval_copy(e->vals[i]);
+        }
+    }
+    return tval_err("unbound symbol!");
+}
+void tenv_put(tenv* e, tval* k, tval* v){
+    for (int i=0; i<e->count; i++){
+        if(!strcmp(e->syms[i], k->sym )){
+            tval_del(e->vals[i]);
+            e->vals[i] = tval_copy(v);
+            return;
+        }
+    }
+
+    e->count++;
+    e->syms = realloc(e->syms, sizeof(char*)*e->count);
+    e->vals = realloc(e->vals, sizeof(tval*)*e->count);
+
+    e->vals[e->count-1] = tval_copy(v);
+    e->syms[e->count-1] = malloc(strlen(k->sym)+1);
+    strcpy(e->syms[e->count-1], k->sym);
+}
+// ------------------------------------
 
 //Functions for evaluating S-expressions
 tval* tval_pop(tval* v, int i){
