@@ -505,7 +505,13 @@ tval* builtin_mod(tenv* e, tval* a){
 }
 tval* builtin_pow(tenv* e, tval* a){
     return builtin_op(e, a, "^");
+
 }
+
+// Assigning values to variables
+
+
+// -------------------------------------
 
 // Putting builtins in environment
 
