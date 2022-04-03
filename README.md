@@ -1,1 +1,1 @@
-# Thorn - 
+# Thorn - A Language
