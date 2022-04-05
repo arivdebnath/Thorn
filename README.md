@@ -1,3 +1,3 @@
 # Thorn - A Language
 
-Written in C
+Written in C.
