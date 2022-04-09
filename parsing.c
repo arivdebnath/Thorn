@@ -510,6 +510,24 @@ tval* builtin_pow(tenv* e, tval* a){
 
 // Assigning values to variables
 
+tval* builtin_def(tenv* e, tval* a){
+    TASSERT(a, a->cell[0]->type==TVAL_QEXPR, "Function 'def' passed incorrect type!");
+
+    tval* symList = a->cell[0];
+    
+    for(int i=0; i<symList->count; i++){
+        TASSERT(a, symList->cell[i]->type == TVAL_SYM, "Function 'def' cannot define non-symbol");
+    }
+
+    TASSERT(a, symList->count==a->count-1, "Function 'def' cannot define incorrect number of values to symbols");
+
+    for(int i=0; i<symList->count; i++){
+        tenv_put(e, symList->cell[i], a->cell[i+1]);
+    }
+
+    tval_del(a);
+    return tval_syexpr();
+}
 
 // -------------------------------------
 
@@ -530,6 +548,7 @@ void tenv_add_builtins(tenv* e){
     tenv_add_builtin(e, "join", builtin_join);
     tenv_add_builtin(e, "tail", builtin_tail);
     tenv_add_builtin(e, "eval", builtin_eval);
+    tenv_add_builtin(e, "def", builtin_def);
 
     // Mathematical functions
     tenv_add_builtin(e, "+", builtin_add);
