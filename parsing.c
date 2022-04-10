@@ -399,6 +399,7 @@ tval* tval_eval(tenv* e, tval* v){
     if(v->type == TVAL_SYEXPR) { return tval_syexpr_eval(e, v); }
     return v;
 }
+// TO BE UPDATED
 // Macro for error handling
 #define TASSERT(arg, cond, err) \
     if(!(cond)){                \
