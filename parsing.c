@@ -131,13 +131,13 @@ void tval_del(tval* v) {
     switch(v->type){
         case TVAL_NUM:
             break;
+        case TVAL_FUNC:
+            break;
         case TVAL_ERR:
             free(v->err);
             break;
         case TVAL_SYM:
             free(v->sym);
-            break;
-        case TVAL_FUNC:
             break;
         case TVAL_SYEXPR:
             for(int i=0; i<v->count; i++){
@@ -179,7 +179,7 @@ tval* tval_copy(tval* v){
 
         case TVAL_SYEXPR:
             x->count = v->count;
-            x->cell = malloc(sizeof(tval*)*v->count);
+            x->cell = malloc(sizeof(tval*)*x->count);
             for(int i=0; i<v->count; i++){
                 x->cell[i] = tval_copy(v->cell[i]);
             }
@@ -206,6 +206,30 @@ tval* tval_add(tval* v, tval* x){
     v->cell = realloc(v->cell, sizeof(tval*) * v->count);
     v->cell[v->count-1] = x;
     return v;
+}
+tval* tval_join(tval* x, tval* y){
+    for(int i=0l;i<y->count; i++){
+        x = tval_add(x, y->cell[i]);
+    }
+    free(y->cell);
+    free(y);
+    return x;
+}
+tval* tval_pop(tval* v, int i){
+    //the required item
+    tval* x = v->cell[i];
+
+    // deleting the tval* x and moving the tval*s following it one place to the left in the cell array.
+    memmove(&v->cell[i], &v->cell[i+1], sizeof(tval*) * (v->count-i-1));
+
+    v->count-- ;
+    v->cell = realloc(v->cell, sizeof(tval *) * v->count);
+    return x;
+}
+tval* tval_take(tval* v, int i){
+    tval* x = tval_pop(v, i);
+    tval_del(v);
+    return x;
 }
 
 tval* tval_read(mpc_ast_t* t){
@@ -288,7 +312,6 @@ tenv* tenv_new(void){
     return e;
 }
 
-void tval_del(tval* v);
 void tenv_del(tenv* e){
     for(int i=0; i<e->count; i++){
         free(e->syms[i]);
@@ -298,21 +321,18 @@ void tenv_del(tenv* e){
     free(e->vals);
     free(e);
 }
-tval* tval_copy(tval* v);
-
-tval* tval_err(char* m, ...);
 
 tval* tenv_get(tenv* e, tval* k){
     for(int i=0; i<e->count; i++){
-        if(!strcmp( e->syms[i], k->sym)){
+        if(strcmp( e->syms[i], k->sym)==0){
             return tval_copy(e->vals[i]);
         }
     }
-    return tval_err("unbound symbol!");
+    return tval_err("Unbound Symbol '%s'", k->sym);
 }
 void tenv_put(tenv* e, tval* k, tval* v){
     for (int i=0; i<e->count; i++){
-        if(!strcmp(e->syms[i], k->sym )){
+        if(strcmp(e->syms[i], k->sym )==0){
             tval_del(e->vals[i]);
             e->vals[i] = tval_copy(v);
             return;
@@ -328,24 +348,31 @@ void tenv_put(tenv* e, tval* k, tval* v){
     strcpy(e->syms[e->count-1], k->sym);
 }
 // ------------------------------------
+//Builtins
+// Macro for error handling
+#define TASSERT(arg, cond, fmt, ...) \
+    if(!(cond)){                \
+        tval* err = tval_err(fmt, ##__VA_ARGS__);\
+        tval_del(arg); \
+        return err;  \
+    }
 
+#define TASSERT_TYPE(func, args, index, expect) \
+    TASSERT(args, args->cell[index]->type == expect, \
+    "Function '%s' passed incorrect type for argument %i. Got %s, Expected %s.", \
+    func, index, type_name(args->cell[index]->type), type_name(expect))
+
+#define TASSERT_NUM(func, args, num)\
+    TASSERT(args, args->count==num, \
+    "Function '%s' passed incorrect number of arguments. Got %i, Expected %i.", \
+    func, args->count, num)
+
+#define TASSERT_NOT_EMPTY(func, args, index)\
+    TASSERT(args, args->cell[index]->count != 0, \
+    "Function '%s' passed {} for argument %i.", func, index);
+
+tval* tval_eval(tenv* e, tval* v);
 //Functions for evaluating S-expressions
-tval* tval_pop(tval* v, int i){
-    //the required item
-    tval* x = v->cell[i];
-
-    // deleting the tval* x and moving the tval*s following it one place to the left in the cell array.
-    memmove(&v->cell[i], &v->cell[i+1], sizeof(tval*) * v->count-1);
-
-    v->count-- ;
-    v->cell = realloc(v->cell, sizeof(tval *) * v->count);
-    return x;
-}
-tval* tval_take(tval* v, int i){
-    tval* x = tval_pop(v, i);
-    tval_del(v);
-    return x;
-}
 
 tval* builtin_op(tenv* e, tval* a, char* op){
     for(int i=0; i<a->count; i++){
@@ -385,7 +412,6 @@ tval* builtin_op(tenv* e, tval* a, char* op){
 }
 
 tval* builtin(tenv* e, tval* a, char* func);
-tval* tval_eval(tenv* e, tval* v);
 
 tval* tval_syexpr_eval(tenv* e, tval* v){
     for(int i=0; i<v->count; i++){
@@ -425,13 +451,6 @@ tval* tval_eval(tenv* e, tval* v){
     return v;
 }
 // TO BE UPDATED
-// Macro for error handling
-#define TASSERT(arg, cond, fmt, ...) \
-    if(!(cond)){                \
-        tval* err = tval_err(fmt, ##__VA_ARGS__);\
-        tval_del(arg); \
-        return err;  \
-    }
 
 // Functions for  Q-expressions
 tval* builtin_head(tenv* e, tval* a){
@@ -495,13 +514,6 @@ tval* builtin_join(tenv* e, tval* a){
     return x;
 }
 
-tval* tval_join(tval* x, tval* y){
-    while(y->count){
-        x = tval_add(x, tval_pop(y, 0));
-    }
-    tval_del(y);
-    return x;
-}
 
 tval* builtin(tenv* e, tval* a, char* op){
     if(!strcmp("list", op)){ return builtin_list(e, a); }
