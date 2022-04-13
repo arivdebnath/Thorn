@@ -74,12 +74,25 @@ tval* tval_num(long x){
     return v;
 }
 
-tval* tval_err(char* m){
+tval* tval_err(char* fmt, ...){
     tval* v = malloc(sizeof(tval));
     v->type = TVAL_ERR;
-    v->err = malloc(strlen(m)+1);
-    strcpy(v->err, m);
+
+    // Create a va_list to store the variable arguments
+    va_list va;
+    va_start(va, fmt);
+
+    // allocating buffer to v
+    v->err = malloc(512);
+
+    vsnprintf(v->err, 511, fmt, va);
+
+    v->err = realloc(v->err, strlen(v->err)+1);
+
+    va_end(va);
+
     return v;
+
 }
 
 tval* tval_sym(char* s){
@@ -247,6 +260,18 @@ void tval_println(tval* v){
     putchar('\n');
 }
 
+char* type_name(int t){
+    switch(t){
+        case TVAL_FUNC: return "Function";
+        case TVAL_NUM: return "Number";
+        case TVAL_ERR: return "Error";
+        case TVAL_SYM: return "Symbol";
+        case TVAL_SYEXPR: return "S-expression";
+        case TVAL_QEXPR: return "Q-expression";
+        default: return "Unknown";
+    }
+}
+
 // --- environment ---
 
 struct tenv{
@@ -275,7 +300,7 @@ void tenv_del(tenv* e){
 }
 tval* tval_copy(tval* v);
 
-tval* tval_err(char* m);
+tval* tval_err(char* m, ...);
 
 tval* tenv_get(tenv* e, tval* k){
     for(int i=0; i<e->count; i++){
@@ -401,15 +426,16 @@ tval* tval_eval(tenv* e, tval* v){
 }
 // TO BE UPDATED
 // Macro for error handling
-#define TASSERT(arg, cond, err) \
+#define TASSERT(arg, cond, fmt, ...) \
     if(!(cond)){                \
-        tval_del(arg);          \
-        return tval_err(err);   \
+        tval* err = tval_err(fmt, ##__VA_ARGS__);\
+        tval_del(arg); \
+        return err;  \
     }
 
 // Functions for  Q-expressions
 tval* builtin_head(tenv* e, tval* a){
-    TASSERT(a, a->count==1, "Function 'head' passed too many arguments!");
+    TASSERT(a, a->count==1, "Function 'head' passed too many arguments!", "Got %i, Expected %i.", a->count, 1);
 
     TASSERT(a, a->cell[0]->type==TVAL_QEXPR, "Function 'head' passed incorrect type!");
 
