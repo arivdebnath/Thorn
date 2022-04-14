@@ -372,7 +372,66 @@ void tenv_put(tenv* e, tval* k, tval* v){
     "Function '%s' passed {} for argument %i.", func, index);
 
 tval* tval_eval(tenv* e, tval* v);
-//Functions for evaluating S-expressions
+
+tval* builtin_list(tenv* e, tval* a){
+    a->type=TVAL_QEXPR;
+    return a;
+}
+tval* builtin_head(tenv* e, tval* a){
+    TASSERT(a, a->count==1, "Function 'head' passed too many arguments!", "Got %i, Expected %i.", a->count, 1);
+
+    TASSERT(a, a->cell[0]->type==TVAL_QEXPR, "Function 'head' passed incorrect type!");
+
+    TASSERT(a, a->cell[0]->count!=0, "Function 'head' passed {}!");
+
+    tval* x = tval_take(a, 0);
+
+    while(x->count>1){
+        tval_del(tval_pop(x, 1));
+    }
+    return x;
+}
+
+tval* builtin_tail(tenv* e, tval* a){
+    TASSERT(a, a->count==1, "Function 'tail' passed too many arguments!");
+    
+    TASSERT(a, a->cell[0]->type==TVAL_QEXPR, "Function 'tail' passed wrong argument type!");
+
+    TASSERT(a, a->cell[0]->count!=0, "Function 'tail' passed {}!");
+
+    tval* x = tval_take(a, 0);
+    tval_del(tval_pop(x, 0));
+    return x;
+}
+
+
+
+tval* builtin_eval(tenv* e, tval* a){
+    TASSERT(a, a->count==1, "Function 'eval' passed too many arguments!");
+
+    TASSERT(a, a->cell[0]->type==TVAL_QEXPR, "Function 'eval' passed wrong type!");
+
+    tval* x = tval_take(a, 0);
+    x->type = TVAL_SYEXPR;
+    return tval_eval(e, x);
+
+}
+
+tval* builtin_join(tenv* e, tval* a){
+    for(int i=0; i<a->count; i++){
+        TASSERT(a, a->cell[i]->type==TVAL_QEXPR, "Function 'join' passed wrong type!");
+    }
+
+    tval* x = tval_pop(a, 0);
+
+    while(a->count){
+        tval* y = tval_pop(a, 0);
+        x = tval_join(x, y);
+    }
+    tval_del(a);
+    return x;
+}
+
 
 tval* builtin_op(tenv* e, tval* a, char* op){
     for(int i=0; i<a->count; i++){
@@ -450,70 +509,6 @@ tval* tval_eval(tenv* e, tval* v){
     if(v->type == TVAL_SYEXPR) { return tval_syexpr_eval(e, v); }
     return v;
 }
-// TO BE UPDATED
-
-// Functions for  Q-expressions
-tval* builtin_head(tenv* e, tval* a){
-    TASSERT(a, a->count==1, "Function 'head' passed too many arguments!", "Got %i, Expected %i.", a->count, 1);
-
-    TASSERT(a, a->cell[0]->type==TVAL_QEXPR, "Function 'head' passed incorrect type!");
-
-    TASSERT(a, a->cell[0]->count!=0, "Function 'head' passed {}!");
-
-    tval* x = tval_take(a, 0);
-
-    while(x->count>1){
-        tval_del(tval_pop(x, 1));
-    }
-    return x;
-}
-
-tval* builtin_tail(tenv* e, tval* a){
-    TASSERT(a, a->count==1, "Function 'tail' passed too many arguments!");
-    
-    TASSERT(a, a->cell[0]->type==TVAL_QEXPR, "Function 'tail' passed wrong argument type!");
-
-    TASSERT(a, a->cell[0]->count!=0, "Function 'tail' passed {}!");
-
-    tval* x = tval_take(a, 0);
-    tval_del(tval_pop(x, 0));
-    return x;
-}
-
-
-tval* builtin_list(tenv* e, tval* a){
-    a->type=TVAL_QEXPR;
-    return a;
-}
-
-tval* builtin_eval(tenv* e, tval* a){
-    TASSERT(a, a->count==1, "Function 'eval' passed too many arguments!");
-
-    TASSERT(a, a->cell[0]->type==TVAL_QEXPR, "Function 'eval' passed wrong type!");
-
-    tval* x = tval_take(a, 0);
-    x->type = TVAL_SYEXPR;
-    return tval_eval(e, x);
-
-}
-
-tval* tval_join(tval* x, tval* y);
-
-tval* builtin_join(tenv* e, tval* a){
-    for(int i=0; i<a->count; i++){
-        TASSERT(a, a->cell[i]->type==TVAL_QEXPR, "Function 'join' passed wrong type!");
-    }
-
-    tval* x = tval_pop(a, 0);
-
-    while(a->count){
-        tval* y = tval_pop(a, 0);
-        x = tval_join(x, y);
-    }
-    tval_del(a);
-    return x;
-}
-
 
 tval* builtin(tenv* e, tval* a, char* op){
     if(!strcmp("list", op)){ return builtin_list(e, a); }
